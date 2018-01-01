@@ -1,4 +1,8 @@
 SHA256 (only if the blockchain is not enough code)
+how to extend the message to (512 mod) size?
+1) 
+
+--------------------------------------------------------------
 data tran = String String float
 we want to use Monad of tran where
 Just tran -> the tran was valid
