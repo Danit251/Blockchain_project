@@ -1,0 +1,34 @@
+SHA256 (only if the blockchain is not enough code)
+data tran = String String float
+we want to use Monad of tran where
+Just tran -> the tran was valid
+Nothing -> the tran isnt valid
+valid :: tran -> Bool (checking the users balances)
+
+data block = tran tran
+we can create functor over block with fmap
+
+chain = Data.STM.LinkedList block
+
+pool = Data.Queue tran (here we have all the pending transactions to be picked)
+
+data User = private_addr, public_addr, float (wallet address and the balance)
+data Users = [User]
+
+create_new_user :: -> (private_addr, public_addr) (--address) 
+private_addrs is random string m
+public_addrs is just SHA256(m)
+balance is 0
+return (private_addr, public_addr)
+
+create_trans(private_source, public_source, public_dest, amount)
+if SHA256(private) == public_source && valid(amount) --> add (Just trans) to the pool
+else Nothing
+
+create_block(public_addrs_miner, hash_seed)
+if SHA256(hash_seed) < M 
+create the block data with 2 transactions from the pool (pop and pop)
+reward the miner with 50 BTC
+update the source and the dest balances
+insert the block into the blockchain
+
