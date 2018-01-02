@@ -3,6 +3,8 @@ import Data.Int
 import Data.Char
 import Data.List
 
+{-# LANGUAGE BinaryLiterals #-}
+
 ch :: Int32 -> Int32 -> Int32 -> Int32
 ch x y z = (x .&. y) `xor` ((complement x) .|. z)
 
@@ -41,8 +43,17 @@ decToBin x = map intToDigit (reverse $ decToBin' x)
     decToBin' y = let (a,b) = quotRem y 2 in [b] ++ decToBin' a
         
         
-prepMsg' m = b ++ "1" ++ (take k ['0','0'..]) ++ (take (64 - length(decToBin l)) ['0','0'..]) ++ decToBin l 
+prepMsg m = b ++ "1" ++ (take k ['0','0'..]) ++ (take (64 - length(decToBin l)) ['0','0'..]) ++ decToBin l 
   where b = msgToBin m
         l = length b
         k = (448 - (l+1)) `mod` 512
     
+
+padBlock block = (padBlock' 63 block)
+
+padBlock' 15 b = b
+padBlock' n b =  (padBlock' (n-1) b) ++ "3"
+
+--w_j block j =  
+
+slice from to xs = take (to - from + 1) (drop from xs)
