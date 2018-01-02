@@ -1,6 +1,7 @@
 import Data.Bits
 import Data.Int
 import Data.Char
+import Data.List
 
 ch :: Int32 -> Int32 -> Int32 -> Int32
 ch x y z = (x .&. y) `xor` ((complement x) .|. z)
@@ -20,26 +21,28 @@ sigma'0 x = (rotate x (-7)) `xor` (rotate x (-18)) `xor` (rotate x (-3))
 sigma'1 :: Int32 -> Int32
 sigma'1 x = (rotate x (-17)) `xor` (rotate x (-19)) `xor` (rotate x (-10))
 
-a32 = fromIntegral (1 :: Int8) ::Int
-b32 = fromIntegral (2 :: Int8) ::Int
-
 concatBytes :: Int8 -> Int8 -> Int8 -> Int8 -> Int32
 concatBytes a b c d = (fromIntegral a ::Int32) *(2^24) + (fromIntegral b ::Int32) *(2^16) + (fromIntegral c ::Int32) *(2^8) + (fromIntegral d ::Int32)
 
+--convert ascii msg with chars between 0-255 to the binary represention
+msgToBin m = intercalate "" (map ascii256ToBin m)
 
---type Block = [Int8]
---prepMsg :: String -> [Block]
---prepMsg m = 
+--convert ascii char between 0-255 to the coresponding binary represention of 8bit
+ascii256ToBin x = (take (8 - length(a_x)) ['0','0'..]) ++ a_x
+  where a_x = asciiToBin x
 
---decToBin :: Int -> String
+--convert ascii char to the coresponding binary represention
+asciiToBin x =  decToBin (ord x)
 
-asciiToBin x = map intToDigit (reverse $ asciiToBin' (ord x))
+
+decToBin x = map intToDigit (reverse $ decToBin' x)
   where
-    asciiToBin' 0 = []
-    asciiToBin' y = let (a,b) = quotRem y 2 in [b] ++ asciiToBin' a
-      
-ascii256ToBin x = map intToDigit (take (8 - length(asciiToBin x)) [0,0..]) ++ asciiToBin x
-
---msgToBin :: String -> String
-msgToBin m = map ascii256ToBin m
+    decToBin' 0 = []
+    decToBin' y = let (a,b) = quotRem y 2 in [b] ++ decToBin' a
+        
+        
+prepMsg' m = b ++ "1" ++ (take k ['0','0'..]) ++ (take (64 - length(decToBin l)) ['0','0'..]) ++ decToBin l 
+  where b = msgToBin m
+        l = length b
+        k = (448 - (l+1)) `mod` 512
     
