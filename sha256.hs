@@ -18,7 +18,7 @@ k = map (fromIntegral) [1116352408, 1899447441, 3049323471, 3921009573, 96198716
 h' = map (fromIntegral) [1779033703, 3144134277, 1013904242, 2773480762, 1359893119, 2600822924, 528734635, 1541459225]
                         :: [Word32]
 
--- auxiliary function
+-- logic functions
 ch :: Word32 -> Word32 -> Word32 -> Word32
 ch x y z = (x .&. y) `xor` ((complement x) .&. z)
 
@@ -41,6 +41,45 @@ sigma'1 x = (rotate a (-17)) `xor` (rotate a (-19)) `xor` (shift a (-10))
   where
     a = bin2dec x
 
+-- algorithm    
+padMsg :: String -> String        
+padMsg m = b ++ "1" ++ (take k ['0','0'..]) ++ (take (64 - length(decToBin l)) ['0','0'..]) ++ decToBin l 
+  where b = msgToBin m
+        l = length b
+        k = (448 - (l+1)) `mod` 512
+
+
+extendBlock :: String -> String 
+extendBlock block = (extendBlock' 16 block)
+  where 
+    extendBlock' 64 b = b
+    extendBlock' j b = (extendBlock' (j+1) (b ++ decTo32Bin (fromIntegral (
+                     (sigma'1(slice ((j-2)*32) ((j-1)*32) b))   +
+                     (bin2dec(slice ((j-7)*32) ((j-6)*32) b))   +
+                     (sigma'0(slice ((j-15)*32) ((j-14)*32) b)) +
+                     (bin2dec(slice ((j-16)*32) ((j-15)*32) b))
+                                                                    )  :: Int)))
+                                                                    
+update8Vals 64 block a b c d e f g h = (a, b, c, d, e, f, g, h)
+update8Vals j  block a b c d e f g h = update8Vals (j+1) block (t1+t2) a b c (d+t1) e f g 
+  where 
+    t1 = h + (sigma1 e) + (ch e f g) + (k!!j) + (bin2dec (slice (j*32) ((j+1)*32) block))
+    t2 = (sigma0 a) + (maj a b c)
+
+compress :: Int -> Int -> String -> [Word32] -> String
+compress i n w hs = if i==n then concat (map show8Hex hs)
+                    else  compress (i+1) n w [a+hs!!0, b+hs!!1, c+hs!!2, d+hs!!3, e+hs!!4, f+hs!!5, g+hs!!6, h+hs!!7]   
+                      where
+                        (a,b,c,d,e,f,g,h) = update8Vals 0 (extendBlock (slice (i*512) ((i+1)*512) w)) 
+                          (hs!!0) (hs!!1) (hs!!2) (hs!!3) (hs!!4) (hs!!5) (hs!!6) (hs!!7)
+    
+sha256 :: String -> String
+sha256 msg = compress 0 n pad h'
+  where
+    pad = padMsg msg
+    n = (length pad) `div` 512
+
+-- auxiliary function
 msgToBin :: String -> String
 msgToBin m = intercalate "" (map ascii256ToBin m)
 
@@ -65,41 +104,17 @@ slice from to xs = take (to - from) (drop from xs)
 bin2dec :: String -> Word32
 bin2dec = foldr (\c s -> s * 2 + c) 0 . reverse . map c2i
   where c2i c = if c == '0' then 0 else 1
-         
-padMsg :: String -> String        
-padMsg m = b ++ "1" ++ (take k ['0','0'..]) ++ (take (64 - length(decToBin l)) ['0','0'..]) ++ decToBin l 
-  where b = msgToBin m
-        l = length b
-        k = (448 - (l+1)) `mod` 512
-
--- algorithm
-extendBlock :: String -> String 
-extendBlock block = (extendBlock' 16 block)
-  where 
-    extendBlock' 64 b = b
-    extendBlock' j b = (extendBlock' (j+1) (b ++ decTo32Bin (fromIntegral (
-                     (sigma'1(slice ((j-2)*32) ((j-1)*32) b))   +
-                     (bin2dec(slice ((j-7)*32) ((j-6)*32) b))   +
-                     (sigma'0(slice ((j-15)*32) ((j-14)*32) b)) +
-                     (bin2dec(slice ((j-16)*32) ((j-15)*32) b))
-                                                                    )  :: Int)))
-                                                                    
-update8Vals 64 block a b c d e f g h = (a, b, c, d, e, f, g, h)
-update8Vals j  block a b c d e f g h = update8Vals (j+1) block (t1+t2) a b c (d+t1) e f g 
-  where 
-    t1 = h + (sigma1 e) + (ch e f g) + (k!!j) + (bin2dec (slice (j*32) ((j+1)*32) block))
-    t2 = (sigma0 a) + (maj a b c)
-
-compress :: Int -> Int -> String -> [Word32] -> String
-compress i n w hs = if i==n then (concat (zipWith showHex hs (replicate 8 ""))) 
-                    else compress (i+1) n w [a+hs!!0, b+hs!!1, c+hs!!2, d+hs!!3, e+hs!!4, f+hs!!5, g+hs!!6, h+hs!!7]   
-                      where
-                        (a,b,c,d,e,f,g,h) = update8Vals 0 (extendBlock (slice (i*512) ((i+1)*512) w)) 
-                          (h'!!0) (h'!!1) (h'!!2) (h'!!3) (h'!!4) (h'!!5) (h'!!6) (h'!!7)
-    
-sha256 :: String -> String
-sha256 msg = compress 0 n pad h'
+  
+show8Hex :: (Integral a, Show a) => a -> String
+show8Hex num = (take (8-l) ['0','0'..]) ++ hex 
   where
-    pad = padMsg msg
-    n = (length pad) `div` 512
+    hex = showHex num ""
+    l= length hex
+
+--test
+test =  sha256 "" == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"  &&
+        sha256 "abc" == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad" &&
+        sha256 "My name is Michael Werman and I'm teaching Haskell course in HUJI. WOW"
+            == "a98b206fec0994aa3a2bf7ad00b0fdaa32218929e6f589a1ad3fae0aa57fac8d"
+   
 
