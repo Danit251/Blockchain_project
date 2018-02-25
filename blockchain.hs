@@ -1,8 +1,14 @@
 import Sha256
 import Numeric
+import Data.Maybe
 
 a = createGenesisBlock
-m = 2^240
+m = 2^253
+
+
+
+data BlockChain Block = Node Block [BlockChain Block] deriving (Show)
+
 
 
 data Block = Block {index :: Int,
@@ -28,4 +34,17 @@ createBlock prevBlock newText blockHash = Block {index = (index prevBlock) + 1,
                                        prevHash = hash prevBlock, 
                                        hash = blockHash}
                                        
---addBlock indexPrev newBlock =  
+try2AddBlock blockChain block prevId seed = if (sha256 seed) < m 
+                             then addBlock blockChain block prevId -- "Just newBlockChain"
+                             else blockChain -- IMPORTENT not the real return value should be "Nothing"
+                             
+addBlock prevId blockChain block 
+
+
+addBlock :: Int -> Block -> BlockChain Block -> BlockChain Block
+addBlock prevId block (Node root childs)
+                                        |childs == [] && prevId /= (index root) = Nothing
+                                        |prevId == (index root) = Just (Node root childs ++ [block])
+                                        |otherwise = msum (map addBlock' childs)
+                                        where
+                                          addBlock' = (addBlock prevId block)
