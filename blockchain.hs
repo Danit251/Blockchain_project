@@ -5,9 +5,15 @@ import Data.Maybe
 a = createGenesisBlock
 m = 2^253
 
+zero = Block {index = 0, text = "ZERO", prevHash = "0", hash = ""}
+one = Block {index = 1, text = "ONE", prevHash = "0", hash = ""}
+two = Block {index = 2, text = "TWO", prevHash = "0", hash = ""}
+three = BlockChain (Block {index = 3, text = "THREE", prevHash = "0", hash = ""}) []
+--retree = BlockChain 5 [BlockChain 3 [BlockChain 1 [], BlockChain 4[]], BlockChain 7 []]
 
+rosetree = BlockChain zero [BlockChain one [], BlockChain two []]
 
-data BlockChain Block = Node Block [BlockChain Block] deriving (Show)
+data BlockChain a = BlockChain a [BlockChain a] deriving (Show)
 
 
 
@@ -34,17 +40,14 @@ createBlock prevBlock newText blockHash = Block {index = (index prevBlock) + 1,
                                        prevHash = hash prevBlock, 
                                        hash = blockHash}
                                        
-try2AddBlock blockChain block prevId seed = if (sha256 seed) < m 
-                             then addBlock blockChain block prevId -- "Just newBlockChain"
-                             else blockChain -- IMPORTENT not the real return value should be "Nothing"
-                             
-addBlock prevId blockChain block 
+--try2AddBlock blockChain block prevId seed = if (sha256 seed) < m 
+--                             then addBlock blockChain block prevId -- "Just newBlockChain"
+--                             else blockChain -- IMPORTENT not the real return value should be "Nothing"
 
 
-addBlock :: Int -> Block -> BlockChain Block -> BlockChain Block
-addBlock prevId block (Node root childs)
-                                        |childs == [] && prevId /= (index root) = Nothing
-                                        |prevId == (index root) = Just (Node root childs ++ [block])
-                                        |otherwise = msum (map addBlock' childs)
-                                        where
-                                          addBlock' = (addBlock prevId block)
+add id (BlockChain x []) _
+             |(index x) /= id = (BlockChain x []) 
+add id (BlockChain x ys) block 
+                          |(index x == id) = BlockChain x $ ys ++ [block]
+                          |otherwise = BlockChain x $ map (\z -> add id z block) ys
+
